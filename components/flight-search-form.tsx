@@ -67,7 +67,7 @@ export function FlightSearchForm({ onSearch }: FlightSearchFormProps) {
   }
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card p-6">
+    <div className="relative z-10 w-full rounded-xl border border-border bg-card p-6">
       <div className="mb-6 flex gap-4">
         <Button
           variant={tripType === "roundtrip" ? "secondary" : "ghost"}

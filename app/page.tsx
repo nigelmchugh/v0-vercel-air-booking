@@ -204,8 +204,8 @@ export default function Home() {
         ) : (
           <>
             {/* Hero */}
-            <section className="relative overflow-hidden py-16 lg:py-24">
-              <div className="absolute inset-0 -z-10">
+            <section className="relative py-16 lg:py-24">
+              <div className="pointer-events-none absolute inset-0 -z-10">
                 <div className="absolute inset-0 bg-gradient-to-b from-card/50 to-background" />
               </div>
               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
