@@ -1,31 +1,36 @@
 "use client"
 
 import { ArrowRight } from "lucide-react"
+import Link from "next/link"
 
 const destinations = [
   {
-    city: "Tokyo",
-    country: "Japan",
-    price: 899,
-    image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop",
+    city: "London",
+    country: "United Kingdom",
+    price: 49,
+    slug: "flights-from-dublin-to-london",
+    image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=300&fit=crop",
   },
   {
-    city: "Paris",
-    country: "France",
-    price: 649,
-    image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=300&fit=crop",
+    city: "New York",
+    country: "United States",
+    price: 279,
+    slug: "flights-from-dublin-to-new-york",
+    image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop",
   },
   {
-    city: "Dubai",
-    country: "UAE",
-    price: 749,
-    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop",
+    city: "Amsterdam",
+    country: "Netherlands",
+    price: 79,
+    slug: "flights-from-dublin-to-amsterdam",
+    image: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=400&h=300&fit=crop",
   },
   {
-    city: "Singapore",
-    country: "Singapore",
-    price: 799,
-    image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=400&h=300&fit=crop",
+    city: "Barcelona",
+    country: "Spain",
+    price: 89,
+    slug: "flights-from-dublin-to-barcelona",
+    image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400&h=300&fit=crop",
   },
 ]
 
@@ -34,8 +39,8 @@ export function PopularDestinations() {
     <section className="py-16">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Popular Destinations</h2>
-          <p className="text-muted-foreground">Discover our most booked routes</p>
+          <h2 className="text-2xl font-bold">Popular Routes from Dublin</h2>
+          <p className="text-muted-foreground">Our most booked destinations from DUB</p>
         </div>
         <button className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground">
           View all
@@ -45,9 +50,10 @@ export function PopularDestinations() {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {destinations.map((destination) => (
-          <div
+          <Link
             key={destination.city}
-            className="group cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-muted-foreground/50"
+            href={`/flights/${destination.slug}`}
+            className="group cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/50 hover:shadow-md"
           >
             <div className="relative h-48 overflow-hidden">
               <img
@@ -65,10 +71,10 @@ export function PopularDestinations() {
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">From</span>
-                <span className="text-xl font-bold">${destination.price}</span>
+                <span className="text-xl font-bold">€{destination.price}</span>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
