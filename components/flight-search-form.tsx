@@ -10,14 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 
 const airports = [
-  { code: "SFO", city: "San Francisco", name: "San Francisco International" },
-  { code: "LAX", city: "Los Angeles", name: "Los Angeles International" },
-  { code: "JFK", city: "New York", name: "John F. Kennedy International" },
-  { code: "LHR", city: "London", name: "Heathrow Airport" },
-  { code: "CDG", city: "Paris", name: "Charles de Gaulle" },
-  { code: "NRT", city: "Tokyo", name: "Narita International" },
-  { code: "SIN", city: "Singapore", name: "Changi Airport" },
-  { code: "DXB", city: "Dubai", name: "Dubai International" },
+  { code: "DUB", city: "Dublin",          name: "Dublin Airport" },
+  { code: "LHR", city: "London",          name: "Heathrow Airport" },
+  { code: "LGW", city: "London Gatwick",  name: "Gatwick Airport" },
+  { code: "JFK", city: "New York",        name: "John F. Kennedy International" },
+  { code: "BOS", city: "Boston",          name: "Logan International" },
+  { code: "AMS", city: "Amsterdam",       name: "Amsterdam Schiphol" },
+  { code: "BCN", city: "Barcelona",       name: "Barcelona El Prat" },
+  { code: "CDG", city: "Paris",           name: "Charles de Gaulle" },
+  { code: "MAD", city: "Madrid",          name: "Adolfo Suárez Madrid–Barajas" },
+  { code: "FCO", city: "Rome",            name: "Leonardo da Vinci–Fiumicino" },
+  { code: "MXP", city: "Milan",           name: "Milan Malpensa" },
+  { code: "LIS", city: "Lisbon",          name: "Humberto Delgado Airport" },
 ]
 
 interface FlightSearchFormProps {

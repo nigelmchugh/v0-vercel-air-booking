@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { MapPin, Clock, Calendar, Zap, Globe } from "lucide-react"
+import { MapPin, Clock, Calendar, Zap, Globe, Database } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { FareCalendar } from "@/components/fare-calendar"
@@ -11,15 +11,83 @@ import {
   getRouteBySlug,
   getMonthlyFares,
   getFeaturedFlights,
+  type FeaturedFlight,
+  type MonthlyFare,
 } from "@/lib/fare-data"
+import type { RouteData } from "@/app/api/ingest-fares/route"
 
-// ISR — page pre-renders at build, revalidates every 60 seconds
-// Fare data is always fresh. No 24-hour Sputnik lag.
+// ISR — revalidates every 60 seconds from Vercel Edge
+// Fare data from KV is always fresh. No 24-hour Sputnik lag.
 export const revalidate = 60
 
 // Pre-render all known routes at build time
 export async function generateStaticParams() {
   return ROUTES.map((route) => ({ slug: route.slug }))
+}
+
+// Try to load live fare data from Vercel KV
+// Falls back gracefully to mock data if KV isn't configured or route isn't populated yet
+async function getLiveFares(slug: string): Promise<{
+  flights: FeaturedFlight[]
+  monthlyFares: MonthlyFare[]
+  fromKv: boolean
+  updatedAt?: string
+}> {
+  // Derive the KV key from the SEO slug
+  // e.g. "flights-from-dublin-to-london" → "DUB-LHR"
+  const route = getRouteBySlug(slug)
+  if (!route) {
+    return { flights: getFeaturedFlights(slug), monthlyFares: getMonthlyFares(slug), fromKv: false }
+  }
+
+  try {
+    // Only attempt KV read if env vars are present
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      const { kv } = await import("@vercel/kv")
+      const kvKey = `route:${route.originCode}-${route.destinationCode}`.toLowerCase()
+      const raw = await kv.get<string>(kvKey)
+
+      if (raw) {
+        const data: RouteData = typeof raw === "string" ? JSON.parse(raw) : raw
+
+        // Map KV stored flights → FeaturedFlight shape
+        const kvFlights: FeaturedFlight[] = data.flights.map((f) => ({
+          id: f.id,
+          departureTime: f.departureTime,
+          arrivalTime: f.arrivalTime,
+          duration: f.duration,
+          stops: f.stops,
+          price: f.price,
+          flightNumber: f.flightNumber,
+        }))
+
+        // Build monthly fares from KV lowestFare as baseline
+        const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
+        const seasonality = [1.0, 1.1, 1.4, 1.7, 1.8, 1.5, 1.1, 0.9, 0.95, 0.85, 0.8, 0.9]
+        const kvMonthlyFares: MonthlyFare[] = months.map((month, i) => ({
+          month,
+          lowestFare: Math.round(data.lowestFare * seasonality[i] * (0.92 + Math.random() * 0.16)),
+          available: true,
+        }))
+
+        return {
+          flights: kvFlights,
+          monthlyFares: kvMonthlyFares,
+          fromKv: true,
+          updatedAt: data.updatedAt,
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[route-page] KV read failed, using mock data:", err)
+  }
+
+  // Fallback: mock data
+  return {
+    flights: getFeaturedFlights(slug),
+    monthlyFares: getMonthlyFares(slug),
+    fromKv: false,
+  }
 }
 
 // SEO metadata per route
@@ -53,8 +121,7 @@ export default async function RoutePage({
 
   if (!route) notFound()
 
-  const monthlyFares = getMonthlyFares(slug)
-  const featuredFlights = getFeaturedFlights(slug)
+  const { flights, monthlyFares, fromKv, updatedAt } = await getLiveFares(slug)
   const lowestFare = Math.min(...monthlyFares.map((f) => f.lowestFare))
 
   return (
@@ -94,12 +161,18 @@ export default async function RoutePage({
               <span className="flex items-center gap-2 rounded-full bg-primary/80 px-3 py-0.5 text-white">
                 From €{lowestFare}
               </span>
+              {fromKv && (
+                <span className="flex items-center gap-1 rounded-full bg-green-600/80 px-3 py-0.5 text-white">
+                  <Database className="h-3 w-3" />
+                  Live from KV
+                </span>
+              )}
             </div>
           </div>
         </section>
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Search widget — pre-populated with this route */}
+          {/* Search widget */}
           <div className="mb-10">
             <RouteSearchForm
               defaultFrom={route.originCode}
@@ -121,11 +194,22 @@ export default async function RoutePage({
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Direct flights · {route.duration} · from €{lowestFare}
+                  {fromKv && updatedAt && (
+                    <span className="ml-2 text-green-600">
+                      · Updated {new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  )}
                 </p>
               </div>
+              {fromKv && (
+                <span className="flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+                  <Database className="h-3 w-3" />
+                  Live fares from Vercel KV
+                </span>
+              )}
             </div>
             <div className="space-y-3">
-              {featuredFlights.map((flight) => (
+              {flights.map((flight) => (
                 <RouteFlightCard
                   key={flight.id}
                   flight={flight}
@@ -138,7 +222,7 @@ export default async function RoutePage({
             </div>
           </div>
 
-          {/* Performance callout — demo talking point */}
+          {/* Performance callout */}
           <div className="mb-10 rounded-xl border border-primary/20 bg-primary/5 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
@@ -147,7 +231,9 @@ export default async function RoutePage({
                   <p className="font-semibold">This page is served from Vercel Edge ISR</p>
                   <p className="text-sm text-muted-foreground">
                     Pre-rendered HTML delivered from the nearest edge node. TTFB ~100ms globally.
-                    Fare data revalidates every 60 seconds — not 24 hours.
+                    {fromKv
+                      ? " Fares populated from Vercel KV — updated every time someone searches this route."
+                      : " Fares revalidate every 60 seconds — not 24 hours."}
                   </p>
                 </div>
               </div>
