@@ -6,6 +6,8 @@ import { Footer } from "@/components/footer"
 import { FareCalendar } from "@/components/fare-calendar"
 import { RouteFlightCard } from "@/components/route-flight-card"
 import { RouteSearchForm } from "@/components/route-search-form"
+import { PriceHistogram } from "@/components/price-histogram"
+import { RecentDealsTable } from "@/components/recent-deals-table"
 import {
   ROUTES,
   getRouteBySlug,
@@ -13,6 +15,7 @@ import {
   getFeaturedFlights,
   type FeaturedFlight,
   type MonthlyFare,
+  type PriceObservation,
 } from "@/lib/fare-data"
 import type { RouteData } from "@/app/api/ingest-fares/route"
 
@@ -25,11 +28,12 @@ export async function generateStaticParams() {
   return ROUTES.map((route) => ({ slug: route.slug }))
 }
 
-// Try to load live fare data from Vercel KV
-// Falls back gracefully to mock data if KV isn't configured or route isn't populated yet
+// Try to load live fare data from Redis
+// Falls back gracefully to mock data if Redis isn't configured or route isn't populated yet
 async function getLiveFares(slug: string): Promise<{
   flights: FeaturedFlight[]
   monthlyFares: MonthlyFare[]
+  priceHistory: PriceObservation[]
   fromKv: boolean
   updatedAt?: string
 }> {
@@ -37,7 +41,7 @@ async function getLiveFares(slug: string): Promise<{
   // e.g. "flights-from-dublin-to-london" → "DUB-LHR"
   const route = getRouteBySlug(slug)
   if (!route) {
-    return { flights: getFeaturedFlights(slug), monthlyFares: getMonthlyFares(slug), fromKv: false }
+    return { flights: getFeaturedFlights(slug), monthlyFares: getMonthlyFares(slug), priceHistory: [], fromKv: false }
   }
 
   try {
@@ -77,6 +81,7 @@ async function getLiveFares(slug: string): Promise<{
         return {
           flights: kvFlights,
           monthlyFares: kvMonthlyFares,
+          priceHistory: data.priceHistory || [],
           fromKv: true,
           updatedAt: data.updatedAt,
         }
@@ -90,6 +95,7 @@ async function getLiveFares(slug: string): Promise<{
   return {
     flights: getFeaturedFlights(slug),
     monthlyFares: getMonthlyFares(slug),
+    priceHistory: [],
     fromKv: false,
   }
 }
@@ -125,7 +131,7 @@ export default async function RoutePage({
 
   if (!route) notFound()
 
-  const { flights, monthlyFares, fromKv, updatedAt } = await getLiveFares(slug)
+  const { flights, monthlyFares, priceHistory, fromKv, updatedAt } = await getLiveFares(slug)
   const lowestFare = Math.min(...monthlyFares.map((f) => f.lowestFare))
 
   return (
@@ -184,10 +190,30 @@ export default async function RoutePage({
             />
           </div>
 
+          {/* Price histogram - only show if we have price history */}
+          {priceHistory.length > 0 && (
+            <div className="mb-10">
+              <PriceHistogram priceHistory={priceHistory} />
+            </div>
+          )}
+
           {/* Fare calendar */}
           <div className="mb-10">
             <FareCalendar fares={monthlyFares} />
           </div>
+
+          {/* Recent deals table - only show if we have price history */}
+          {priceHistory.length > 0 && (
+            <div className="mb-10">
+              <RecentDealsTable
+                deals={priceHistory}
+                origin={route.origin}
+                originCode={route.originCode}
+                destination={route.destination}
+                destinationCode={route.destinationCode}
+              />
+            </div>
+          )}
 
           {/* Featured flights */}
           <div className="mb-10">

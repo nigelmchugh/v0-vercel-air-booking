@@ -30,6 +30,14 @@ export interface FeaturedFlight {
   flightNumber: string
 }
 
+export interface PriceObservation {
+  price: number
+  seenAt: string
+  departDate?: string
+  returnDate?: string
+  fareType: "one-way" | "round-trip"
+}
+
 // All SEO-indexed routes — outbound from Dublin + inbound TO Dublin
 export const ROUTES: Route[] = [
   // ── Outbound from Dublin ────────────────────────────────────────────────

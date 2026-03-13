@@ -93,7 +93,14 @@ function generateFlights(from: string, to: string): Flight[] {
 
 // Fire-and-forget: push search results into Vercel KV via our ingest endpoint.
 // This is the "scrape" — every user search auto-populates the SEO landing pages.
-async function captureToKv(from: string, to: string, flights: Flight[]) {
+async function captureToKv(
+  from: string,
+  to: string,
+  flights: Flight[],
+  departDate?: Date,
+  returnDate?: Date,
+  tripType?: "roundtrip" | "oneway"
+) {
   try {
     const res = await fetch("/api/ingest-fares", {
       method: "POST",
@@ -104,6 +111,9 @@ async function captureToKv(from: string, to: string, flights: Flight[]) {
         originCity: CITY_NAMES[from] || from,
         destinationCity: CITY_NAMES[to] || to,
         flights,
+        departDate: departDate?.toISOString(),
+        returnDate: returnDate?.toISOString(),
+        tripType,
       }),
     })
     const data = await res.json()
@@ -155,9 +165,9 @@ export default function Home() {
     setStage("results")
 
     // Capture fares to KV in the background — powers SEO landing pages
-    captureToKv(params.from, params.to, generatedOutbound)
+    captureToKv(params.from, params.to, generatedOutbound, params.departDate, params.returnDate, params.tripType)
     if (params.tripType === "roundtrip") {
-      captureToKv(params.to, params.from, generatedReturn)
+      captureToKv(params.to, params.from, generatedReturn, params.returnDate, params.departDate, params.tripType)
     }
   }
 
