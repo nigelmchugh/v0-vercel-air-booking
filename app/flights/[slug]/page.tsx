@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { unstable_cache } from "next/cache"
 import type { Metadata } from "next"
 import { MapPin, Clock, Calendar, Zap, Globe, Database } from "lucide-react"
 import { Header } from "@/components/header"
@@ -30,7 +31,7 @@ export async function generateStaticParams() {
 
 // Try to load live fare data from Redis
 // Falls back gracefully to mock data if Redis isn't configured or route isn't populated yet
-async function getLiveFares(slug: string): Promise<{
+async function fetchLiveFares(slug: string): Promise<{
   flights: FeaturedFlight[]
   monthlyFares: MonthlyFare[]
   priceHistory: PriceObservation[]
@@ -100,6 +101,19 @@ async function getLiveFares(slug: string): Promise<{
   }
 }
 
+// Wrap the fetch function with Next.js cache and tags
+// When revalidateTag is called with the route tag, this cache is invalidated
+function getLiveFares(slug: string, routeCode: string) {
+  return unstable_cache(
+    () => fetchLiveFares(slug),
+    [`route-fares-${slug}`],
+    {
+      tags: [`route-${routeCode}`],
+      revalidate: 60, // Also revalidate every 60s as fallback
+    }
+  )()
+}
+
 // SEO metadata per route
 export async function generateMetadata({
   params,
@@ -131,7 +145,9 @@ export default async function RoutePage({
 
   if (!route) notFound()
 
-  const { flights, monthlyFares, priceHistory, fromKv, updatedAt } = await getLiveFares(slug)
+  // Build the route code for cache tag matching (e.g., "dub-lhr")
+  const routeCode = `${route.originCode}-${route.destinationCode}`.toLowerCase()
+  const { flights, monthlyFares, priceHistory, fromKv, updatedAt } = await getLiveFares(slug, routeCode)
   const lowestFare = Math.min(...monthlyFares.map((f) => f.lowestFare))
 
   return (

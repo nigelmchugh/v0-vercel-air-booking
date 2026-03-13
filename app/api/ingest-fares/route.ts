@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { Redis } from "@upstash/redis"
 
 // Initialize Redis client if env vars are present
@@ -116,7 +117,11 @@ export async function POST(req: NextRequest) {
       // Also maintain an index of all known routes
       await redis.sadd("routes:index", slug)
 
-      console.log(`[ingest-fares] Stored route:${slug} → Redis (${flights.length} flights, lowest €${lowestFare}, ${priceHistory.length} observations)`)
+      // Revalidate the ISR page for this route so it picks up the new data
+      // This triggers on-demand revalidation instead of waiting for the 60s interval
+      revalidateTag(`route-${slug}`, "max")
+
+      console.log(`[ingest-fares] Stored route:${slug} → Redis (${flights.length} flights, lowest €${lowestFare}, ${priceHistory.length} observations) — ISR revalidated`)
     } else {
       // Redis not configured — log to console (still works as demo without Redis)
       console.log(`[ingest-fares] Redis not configured. Would store route:${slug}`, {
