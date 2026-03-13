@@ -47,19 +47,14 @@ async function fetchLiveFares(slug: string): Promise<{
 
   try {
     // Only attempt Redis read if env vars are present
-    const hasEnvVars = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-    console.log("[v0] fetchLiveFares - hasEnvVars:", hasEnvVars)
-    
-    if (hasEnvVars) {
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
       const { Redis } = await import("@upstash/redis")
       const redis = new Redis({
         url: process.env.KV_REST_API_URL,
         token: process.env.KV_REST_API_TOKEN,
       })
       const kvKey = `route:${route.originCode}-${route.destinationCode}`.toLowerCase()
-      console.log("[v0] fetchLiveFares - checking Redis key:", kvKey)
       const raw = await redis.get<string>(kvKey)
-      console.log("[v0] fetchLiveFares - raw from Redis:", raw ? "DATA FOUND" : "NO DATA")
 
       if (raw) {
         const data: RouteData = typeof raw === "string" ? JSON.parse(raw) : raw
@@ -98,7 +93,6 @@ async function fetchLiveFares(slug: string): Promise<{
   }
 
   // Fallback: mock data
-  console.log("[v0] fetchLiveFares - returning MOCK data for slug:", slug)
   return {
     flights: getFeaturedFlights(slug),
     monthlyFares: getMonthlyFares(slug),
