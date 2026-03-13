@@ -4,7 +4,6 @@ import type { Metadata } from "next"
 import { MapPin, Clock, Calendar, Zap, Globe, Database } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { FareCalendar } from "@/components/fare-calendar"
 import { RouteFlightCard } from "@/components/route-flight-card"
 import { RouteSearchForm } from "@/components/route-search-form"
 import { PriceHistogram } from "@/components/price-histogram"
@@ -13,7 +12,6 @@ import {
   ROUTES,
   getRouteBySlug,
   type FeaturedFlight,
-  type MonthlyFare,
   type PriceObservation,
 } from "@/lib/fare-data"
 import type { RouteData } from "@/app/api/ingest-fares/route"
@@ -31,7 +29,6 @@ export async function generateStaticParams() {
 // Returns null if no real data exists - we only show real data from Redis
 async function fetchLiveFares(slug: string): Promise<{
   flights: FeaturedFlight[]
-  monthlyFares: MonthlyFare[]
   priceHistory: PriceObservation[]
   lowestFare: number
   updatedAt: string
@@ -68,18 +65,8 @@ async function fetchLiveFares(slug: string): Promise<{
           flightNumber: f.flightNumber,
         }))
 
-        // Build monthly fares from KV lowestFare as baseline
-        const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
-        const seasonality = [1.0, 1.1, 1.4, 1.7, 1.8, 1.5, 1.1, 0.9, 0.95, 0.85, 0.8, 0.9]
-        const kvMonthlyFares: MonthlyFare[] = months.map((month, i) => ({
-          month,
-          lowestFare: Math.round(data.lowestFare * seasonality[i] * (0.92 + Math.random() * 0.16)),
-          available: true,
-        }))
-
         return {
           flights: kvFlights,
-          monthlyFares: kvMonthlyFares,
           priceHistory: data.priceHistory || [],
           lowestFare: data.lowestFare,
           updatedAt: data.updatedAt,
@@ -212,11 +199,6 @@ export default async function RoutePage({
                   <PriceHistogram priceHistory={fareData.priceHistory} />
                 </div>
               )}
-
-              {/* Fare calendar */}
-              <div className="mb-10">
-                <FareCalendar fares={fareData.monthlyFares} />
-              </div>
 
               {/* Recent deals table - only show if we have price history */}
               {fareData.priceHistory.length > 0 && (

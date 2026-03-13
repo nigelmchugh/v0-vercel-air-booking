@@ -101,6 +101,7 @@ export function RecentDealsTable({
               <th className="px-6 py-3 font-medium text-muted-foreground">Fare Type</th>
               <th className="px-6 py-3 font-medium text-muted-foreground">Dates</th>
               <th className="px-6 py-3 font-medium text-muted-foreground">Price</th>
+              <th className="px-6 py-3 font-medium text-muted-foreground">Last Seen</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -137,14 +138,14 @@ export function RecentDealsTable({
                   )}
                 </td>
                 <td className="px-6 py-4">
-                  <div>
-                    <p className="text-lg font-bold">
-                      From {currency}{deal.price}*
-                    </p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      Seen: {formatTimeAgo(deal.seenAt)}
-                    </p>
+                  <p className="text-lg font-bold">
+                    {currency}{deal.price}*
+                  </p>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>{formatTimeAgo(deal.seenAt)}</span>
                   </div>
                 </td>
               </tr>
