@@ -137,7 +137,9 @@ export default function Home() {
     passengers: number
     tripType: "roundtrip" | "oneway"
   }) => {
+    console.log("[v0] handleSearch received params:", params)
     const generatedOutbound = generateFlights(params.from, params.to)
+    console.log("[v0] Generated outbound flights:", generatedOutbound.length)
     const generatedReturn = params.tripType === "roundtrip"
       ? generateFlights(params.to, params.from)
       : []
