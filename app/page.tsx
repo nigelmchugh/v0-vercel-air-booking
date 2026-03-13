@@ -93,7 +93,14 @@ function generateFlights(from: string, to: string): Flight[] {
 
 // Fire-and-forget: push search results into Vercel KV via our ingest endpoint.
 // This is the "scrape" — every user search auto-populates the SEO landing pages.
-async function captureToKv(from: string, to: string, flights: Flight[]) {
+async function captureToKv(
+  from: string,
+  to: string,
+  flights: Flight[],
+  departDate?: Date,
+  returnDate?: Date,
+  tripType?: "roundtrip" | "oneway"
+) {
   try {
     const res = await fetch("/api/ingest-fares", {
       method: "POST",
@@ -104,6 +111,9 @@ async function captureToKv(from: string, to: string, flights: Flight[]) {
         originCity: CITY_NAMES[from] || from,
         destinationCity: CITY_NAMES[to] || to,
         flights,
+        departDate: departDate?.toISOString(),
+        returnDate: returnDate?.toISOString(),
+        tripType,
       }),
     })
     const data = await res.json()
@@ -121,9 +131,14 @@ export default function Home() {
     from: string
     to: string
     passengers: number
+    tripType: "roundtrip" | "oneway"
+    departDate: Date
+    returnDate?: Date
   } | null>(null)
-  const [flights, setFlights] = useState<Flight[]>([])
-  const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null)
+  const [outboundFlights, setOutboundFlights] = useState<Flight[]>([])
+  const [returnFlights, setReturnFlights] = useState<Flight[]>([])
+  const [selectedOutbound, setSelectedOutbound] = useState<Flight | null>(null)
+  const [selectedReturn, setSelectedReturn] = useState<Flight | null>(null)
   const [bookingRef, setBookingRef] = useState("")
 
   const handleSearch = (params: {
@@ -134,31 +149,70 @@ export default function Home() {
     passengers: number
     tripType: "roundtrip" | "oneway"
   }) => {
-    const generatedFlights = generateFlights(params.from, params.to)
+    const generatedOutbound = generateFlights(params.from, params.to)
+    const generatedReturn = params.tripType === "roundtrip"
+      ? generateFlights(params.to, params.from)
+      : []
 
-    setSearchParams({ from: params.from, to: params.to, passengers: params.passengers })
-    setFlights(generatedFlights)
-    setSelectedFlight(null)
+    setSearchParams({
+      from: params.from,
+      to: params.to,
+      passengers: params.passengers,
+      tripType: params.tripType,
+      departDate: params.departDate,
+      returnDate: params.returnDate,
+    })
+    setOutboundFlights(generatedOutbound)
+    setReturnFlights(generatedReturn)
+    setSelectedOutbound(null)
+    setSelectedReturn(null)
     setStage("results")
-
-    // Capture fares to KV in the background — powers SEO landing pages
-    captureToKv(params.from, params.to, generatedFlights)
   }
 
-  const handleSelectFlight = (flight: Flight) => {
-    setSelectedFlight(flight)
+  const handleSelectOutbound = (flight: Flight) => {
+    setSelectedOutbound(flight)
+  }
+
+  const handleSelectReturn = (flight: Flight) => {
+    setSelectedReturn(flight)
   }
 
   const handleConfirmBooking = () => {
     const ref = `VA${Math.random().toString(36).substring(2, 8).toUpperCase()}`
     setBookingRef(ref)
     setStage("confirmed")
+
+    // Capture booked fare to Redis — only store when booking is confirmed
+    if (selectedOutbound && searchParams) {
+      captureToKv(
+        searchParams.from,
+        searchParams.to,
+        [selectedOutbound],
+        searchParams.departDate,
+        searchParams.returnDate,
+        searchParams.tripType
+      )
+      
+      // If round trip, also capture the return flight
+      if (searchParams.tripType === "roundtrip" && selectedReturn) {
+        captureToKv(
+          searchParams.to,
+          searchParams.from,
+          [selectedReturn],
+          searchParams.returnDate,
+          searchParams.departDate,
+          searchParams.tripType
+        )
+      }
+    }
   }
 
   const handleNewBooking = () => {
     setStage("search")
-    setFlights([])
-    setSelectedFlight(null)
+    setOutboundFlights([])
+    setReturnFlights([])
+    setSelectedOutbound(null)
+    setSelectedReturn(null)
     setSearchParams(null)
     setBookingRef("")
   }
@@ -168,10 +222,10 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
-        {stage === "confirmed" && selectedFlight && searchParams ? (
+        {stage === "confirmed" && selectedOutbound && searchParams ? (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <BookingConfirmation
-              flight={selectedFlight}
+              flight={selectedOutbound}
               passengers={searchParams.passengers}
               bookingRef={bookingRef}
               onNewBooking={handleNewBooking}
@@ -180,8 +234,8 @@ export default function Home() {
         ) : (
           <>
             {/* Hero */}
-            <section className="relative overflow-hidden py-16 lg:py-24">
-              <div className="absolute inset-0 -z-10">
+            <section className="relative py-16 lg:py-24">
+              <div className="pointer-events-none absolute inset-0 -z-10">
                 <div className="absolute inset-0 bg-gradient-to-b from-card/50 to-background" />
               </div>
               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -202,20 +256,28 @@ export default function Home() {
             </section>
 
             {/* Results */}
-            {stage === "results" && flights.length > 0 && (
+            {stage === "results" && outboundFlights.length > 0 && searchParams && (
               <section className="py-12">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                   <div className="grid gap-8 lg:grid-cols-[1fr,380px]">
                     <FlightResults
-                      flights={flights}
-                      onSelectFlight={handleSelectFlight}
-                      selectedFlight={selectedFlight || undefined}
+                      outboundFlights={outboundFlights}
+                      returnFlights={returnFlights}
+                      onSelectOutbound={handleSelectOutbound}
+                      onSelectReturn={handleSelectReturn}
+                      selectedOutbound={selectedOutbound || undefined}
+                      selectedReturn={selectedReturn || undefined}
+                      isRoundTrip={searchParams.tripType === "roundtrip"}
+                      from={searchParams.from}
+                      to={searchParams.to}
                     />
-                    {selectedFlight && searchParams && (
+                    {selectedOutbound && (
                       <div className="lg:sticky lg:top-8 lg:self-start">
                         <BookingSummary
-                          flight={selectedFlight}
+                          outboundFlight={selectedOutbound}
+                          returnFlight={selectedReturn || undefined}
                           passengers={searchParams.passengers}
+                          isRoundTrip={searchParams.tripType === "roundtrip"}
                           onConfirm={handleConfirmBooking}
                         />
                       </div>
@@ -225,13 +287,15 @@ export default function Home() {
               </section>
             )}
 
+            {/* Popular Destinations - Always show on search stage */}
             {stage === "search" && (
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <PopularDestinations />
-              </div>
+              <>
+                <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <PopularDestinations />
+                </section>
+                <Stats />
+              </>
             )}
-
-            {stage === "search" && <Stats />}
           </>
         )}
       </main>
