@@ -132,6 +132,8 @@ export default function Home() {
     to: string
     passengers: number
     tripType: "roundtrip" | "oneway"
+    departDate: Date
+    returnDate?: Date
   } | null>(null)
   const [outboundFlights, setOutboundFlights] = useState<Flight[]>([])
   const [returnFlights, setReturnFlights] = useState<Flight[]>([])
@@ -157,18 +159,14 @@ export default function Home() {
       to: params.to,
       passengers: params.passengers,
       tripType: params.tripType,
+      departDate: params.departDate,
+      returnDate: params.returnDate,
     })
     setOutboundFlights(generatedOutbound)
     setReturnFlights(generatedReturn)
     setSelectedOutbound(null)
     setSelectedReturn(null)
     setStage("results")
-
-    // Capture fares to KV in the background — powers SEO landing pages
-    captureToKv(params.from, params.to, generatedOutbound, params.departDate, params.returnDate, params.tripType)
-    if (params.tripType === "roundtrip") {
-      captureToKv(params.to, params.from, generatedReturn, params.returnDate, params.departDate, params.tripType)
-    }
   }
 
   const handleSelectOutbound = (flight: Flight) => {
@@ -183,6 +181,30 @@ export default function Home() {
     const ref = `VA${Math.random().toString(36).substring(2, 8).toUpperCase()}`
     setBookingRef(ref)
     setStage("confirmed")
+
+    // Capture booked fare to Redis — only store when booking is confirmed
+    if (selectedOutbound && searchParams) {
+      captureToKv(
+        searchParams.from,
+        searchParams.to,
+        [selectedOutbound],
+        searchParams.departDate,
+        searchParams.returnDate,
+        searchParams.tripType
+      )
+      
+      // If round trip, also capture the return flight
+      if (searchParams.tripType === "roundtrip" && selectedReturn) {
+        captureToKv(
+          searchParams.to,
+          searchParams.from,
+          [selectedReturn],
+          searchParams.returnDate,
+          searchParams.departDate,
+          searchParams.tripType
+        )
+      }
+    }
   }
 
   const handleNewBooking = () => {

@@ -53,8 +53,6 @@ async function fetchLiveFares(slug: string): Promise<{
 
       if (raw) {
         const data: RouteData = typeof raw === "string" ? JSON.parse(raw) : raw
-        console.log("[v0] priceHistory from Redis:", data.priceHistory?.length ?? 0, "entries")
-        console.log("[v0] priceHistory data:", JSON.stringify(data.priceHistory?.slice(0, 2)))
 
         // Map KV stored flights → FeaturedFlight shape
         const kvFlights: FeaturedFlight[] = data.flights.map((f) => ({
