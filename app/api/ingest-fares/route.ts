@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { Redis } from "@upstash/redis"
 
 // Initialize Redis client if env vars are present
@@ -117,11 +117,25 @@ export async function POST(req: NextRequest) {
       // Also maintain an index of all known routes
       await redis.sadd("routes:index", slug)
 
-      // Revalidate the ISR page for this route so it picks up the new data
-      // This triggers on-demand revalidation instead of waiting for the 60s interval
-      revalidateTag(`route-${slug}`, "max")
+      // Revalidate the ISR pages for this route so they pick up the new data
+      // Use revalidatePath which works in Route Handlers (unlike revalidateTag)
+      // Find the matching SEO slug for this route code
+      const seoSlugs = [
+        { code: "dub-lhr", slug: "flights-from-dublin-to-london" },
+        { code: "dub-jfk", slug: "flights-from-dublin-to-new-york" },
+        { code: "dub-ams", slug: "flights-from-dublin-to-amsterdam" },
+        { code: "dub-bcn", slug: "flights-from-dublin-to-barcelona" },
+        { code: "lhr-dub", slug: "flights-from-london-to-dublin" },
+        { code: "jfk-dub", slug: "flights-from-new-york-to-dublin" },
+        { code: "ams-dub", slug: "flights-from-amsterdam-to-dublin" },
+        { code: "bcn-dub", slug: "flights-from-barcelona-to-dublin" },
+      ]
+      const matchedRoute = seoSlugs.find(r => r.code === slug)
+      if (matchedRoute) {
+        revalidatePath(`/flights/${matchedRoute.slug}`)
+      }
 
-      console.log(`[ingest-fares] Stored route:${slug} → Redis (${flights.length} flights, lowest €${lowestFare}, ${priceHistory.length} observations) — ISR revalidated`)
+      console.log(`[ingest-fares] Stored route:${slug} → Redis (${flights.length} flights, lowest €${lowestFare}, ${priceHistory.length} observations) — ISR revalidated via revalidatePath`)
     } else {
       // Redis not configured — log to console (still works as demo without Redis)
       console.log(`[ingest-fares] Redis not configured. Would store route:${slug}`, {

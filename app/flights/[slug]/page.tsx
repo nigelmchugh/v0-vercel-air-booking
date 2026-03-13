@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation"
-import { unstable_cache } from "next/cache"
 import type { Metadata } from "next"
 import { MapPin, Zap, Database } from "lucide-react"
 import { Header } from "@/components/header"
@@ -81,18 +80,7 @@ async function fetchLiveFares(slug: string): Promise<{
   return null
 }
 
-// Wrap the fetch function with Next.js cache and tags
-// When revalidateTag is called with the route tag, this cache is invalidated
-function getLiveFares(slug: string, routeCode: string): Promise<Awaited<ReturnType<typeof fetchLiveFares>>> {
-  return unstable_cache(
-    () => fetchLiveFares(slug),
-    [`route-fares-${slug}`],
-    {
-      tags: [`route-${routeCode}`],
-      revalidate: 60, // Also revalidate every 60s as fallback
-    }
-  )()
-}
+
 
 // SEO metadata per route
 export async function generateMetadata({
@@ -125,9 +113,9 @@ export default async function RoutePage({
 
   if (!route) notFound()
 
-  // Build the route code for cache tag matching (e.g., "dub-lhr")
-  const routeCode = `${route.originCode}-${route.destinationCode}`.toLowerCase()
-  const fareData = await getLiveFares(slug, routeCode)
+  // Fetch live fare data directly from Redis
+  // ISR revalidation is handled by revalidatePath in the ingest-fares API
+  const fareData = await fetchLiveFares(slug)
   
   // Only show real data from Redis - no mock/dummy data
   const hasData = fareData !== null
