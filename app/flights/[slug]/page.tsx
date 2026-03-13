@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation"
-import { unstable_cache } from "next/cache"
 import type { Metadata } from "next"
-import { MapPin, Zap, Database } from "lucide-react"
+import { MapPin, Zap, Database, ArrowRight } from "lucide-react"
+import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { RouteFlightCard } from "@/components/route-flight-card"
-import { RouteSearchForm } from "@/components/route-search-form"
 import { PriceHistogram } from "@/components/price-histogram"
 import { RecentDealsTable } from "@/components/recent-deals-table"
 import {
@@ -81,18 +80,7 @@ async function fetchLiveFares(slug: string): Promise<{
   return null
 }
 
-// Wrap the fetch function with Next.js cache and tags
-// When revalidateTag is called with the route tag, this cache is invalidated
-function getLiveFares(slug: string, routeCode: string): Promise<Awaited<ReturnType<typeof fetchLiveFares>>> {
-  return unstable_cache(
-    () => fetchLiveFares(slug),
-    [`route-fares-${slug}`],
-    {
-      tags: [`route-${routeCode}`],
-      revalidate: 60, // Also revalidate every 60s as fallback
-    }
-  )()
-}
+
 
 // SEO metadata per route
 export async function generateMetadata({
@@ -125,9 +113,9 @@ export default async function RoutePage({
 
   if (!route) notFound()
 
-  // Build the route code for cache tag matching (e.g., "dub-lhr")
-  const routeCode = `${route.originCode}-${route.destinationCode}`.toLowerCase()
-  const fareData = await getLiveFares(slug, routeCode)
+  // Fetch live fare data directly from Redis
+  // ISR revalidation is handled by revalidatePath in the ingest-fares API
+  const fareData = await fetchLiveFares(slug)
   
   // Only show real data from Redis - no mock/dummy data
   const hasData = fareData !== null
@@ -137,50 +125,55 @@ export default async function RoutePage({
       <Header />
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden">
+        {/* Hero Banner with Destination Image */}
+        <section className="relative h-[50vh] min-h-[400px] overflow-hidden">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${route.image})` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-background" />
-          <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-            <div className="mb-2 flex items-center gap-2 text-sm text-white/70">
-              <a href="/" className="hover:text-white">Home</a>
-              <span>/</span>
-              <span>Flights from {route.origin} to {route.destination}</span>
-            </div>
-            <h1 className="mb-4 text-4xl font-bold text-white lg:text-5xl">
-              Flights from {route.origin} to {route.destination}
-            </h1>
-            <div className="flex flex-wrap gap-4 text-sm text-white/80">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {route.originCode} → {route.destinationCode}
-              </span>
-              {hasData && (
-                <span className="flex items-center gap-2 rounded-full bg-primary/80 px-3 py-0.5 text-white">
-                  From €{fareData.lowestFare}
-                </span>
-              )}
-              {hasData && (
-                <span className="flex items-center gap-1 rounded-full bg-green-600/80 px-3 py-0.5 text-white">
-                  <Database className="h-3 w-3" />
-                  Live from Redis
-                </span>
-              )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+          <div className="absolute inset-0 flex flex-col justify-end">
+            <div className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+              <div className="mb-4 flex items-center gap-2 text-sm text-white/80">
+                <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                <span>/</span>
+                <span>Flights to {route.destination}</span>
+              </div>
+              <h1 className="mb-4 text-balance text-4xl font-bold text-white drop-shadow-lg md:text-5xl lg:text-6xl">
+                {route.destination}
+              </h1>
+              <p className="mb-6 max-w-xl text-pretty text-lg text-white/90 drop-shadow">
+                {route.description}
+              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                  <MapPin className="h-4 w-4" />
+                  {route.originCode} → {route.destinationCode}
+                </div>
+                {hasData && (
+                  <div className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-foreground">
+                    From €{fareData.lowestFare}
+                  </div>
+                )}
+                {hasData && (
+                  <div className="flex items-center gap-1.5 rounded-full bg-green-500 px-4 py-2 text-sm font-medium text-white">
+                    <Database className="h-4 w-4" />
+                    Live Prices
+                  </div>
+                )}
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 rounded-full bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Book Now
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Search widget */}
-          <div className="mb-10">
-            <RouteSearchForm
-              defaultFrom={route.originCode}
-              defaultTo={route.destinationCode}
-            />
-          </div>
 
           {/* Show content only if we have real data from Redis */}
           {hasData ? (

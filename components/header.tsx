@@ -16,17 +16,11 @@ export function Header() {
             <span className="text-xl font-semibold tracking-tight">Vercel Air</span>
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Flights
+            <Link href="/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              Book
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Destinations
-            </Link>
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              Deals
-            </Link>
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-              FAQ
+            <Link href="/faq" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              How it Works
             </Link>
           </nav>
         </div>
