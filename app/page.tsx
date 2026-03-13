@@ -265,13 +265,15 @@ export default function Home() {
               </section>
             )}
 
+            {/* Popular Destinations - Always show on search stage */}
             {stage === "search" && (
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <PopularDestinations />
-              </div>
+              <>
+                <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <PopularDestinations />
+                </section>
+                <Stats />
+              </>
             )}
-
-            {stage === "search" && <Stats />}
           </>
         )}
       </main>
