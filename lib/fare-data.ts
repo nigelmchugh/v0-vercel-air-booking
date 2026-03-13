@@ -14,12 +14,6 @@ export interface Route {
   image: string
 }
 
-export interface MonthlyFare {
-  month: string
-  lowestFare: number
-  available: boolean
-}
-
 export interface FeaturedFlight {
   id: string
   departureTime: string
@@ -131,82 +125,6 @@ export const ROUTES: Route[] = [
     image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=1200&h=600&fit=crop",
   },
 ]
-
-// Monthly fare seasonality — mock for fallback only
-// Real data comes from Vercel KV (populated by /api/ingest-fares)
-const BASE_PRICES: Record<string, number> = {
-  "flights-from-dublin-to-london":      49,
-  "flights-from-dublin-to-new-york":    279,
-  "flights-from-dublin-to-amsterdam":   79,
-  "flights-from-dublin-to-barcelona":   89,
-  "flights-from-london-to-dublin":      49,
-  "flights-from-new-york-to-dublin":    299,
-  "flights-from-amsterdam-to-dublin":   79,
-  "flights-from-barcelona-to-dublin":   89,
-}
-
-export function getMonthlyFares(slug: string): MonthlyFare[] {
-  const base = BASE_PRICES[slug] || 99
-  const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
-  const seasonality = [1.0, 1.1, 1.4, 1.7, 1.8, 1.5, 1.1, 0.9, 0.95, 0.85, 0.8, 0.9]
-
-  return months.map((month, i) => ({
-    month,
-    lowestFare: Math.round(base * seasonality[i] * (0.9 + Math.random() * 0.2)),
-    available: true,
-  }))
-}
-
-// Flight schedules — mock for fallback only
-const FLIGHT_SCHEDULES: Record<string, { base: number; duration: string; times: string[][] }> = {
-  "flights-from-dublin-to-london": {
-    base: 49, duration: "1h 20m",
-    times: [["06:30","07:50"],["09:15","10:35"],["12:40","14:00"],["16:25","17:45"],["19:10","20:30"]],
-  },
-  "flights-from-dublin-to-new-york": {
-    base: 279, duration: "7h 30m",
-    times: [["09:00","11:30"],["13:30","16:00"],["19:15","21:45"]],
-  },
-  "flights-from-dublin-to-amsterdam": {
-    base: 79, duration: "2h 05m",
-    times: [["07:15","09:20"],["11:30","13:35"],["15:45","17:50"],["18:20","20:25"]],
-  },
-  "flights-from-dublin-to-barcelona": {
-    base: 89, duration: "2h 35m",
-    times: [["07:00","09:35"],["12:10","14:45"],["17:30","20:05"]],
-  },
-  "flights-from-london-to-dublin": {
-    base: 49, duration: "1h 20m",
-    times: [["07:00","08:20"],["10:10","11:30"],["13:45","15:05"],["17:20","18:40"],["20:30","21:50"]],
-  },
-  "flights-from-new-york-to-dublin": {
-    base: 299, duration: "6h 30m",
-    times: [["21:00","09:30"],["22:30","11:00"]],
-  },
-  "flights-from-amsterdam-to-dublin": {
-    base: 79, duration: "2h 05m",
-    times: [["08:05","10:10"],["12:30","14:35"],["16:45","18:50"],["19:30","21:35"]],
-  },
-  "flights-from-barcelona-to-dublin": {
-    base: 89, duration: "2h 35m",
-    times: [["08:15","10:50"],["13:25","16:00"],["18:40","21:15"]],
-  },
-}
-
-export function getFeaturedFlights(slug: string): FeaturedFlight[] {
-  const schedule = FLIGHT_SCHEDULES[slug] || FLIGHT_SCHEDULES["flights-from-dublin-to-london"]
-  const flightNumbers = ["EI152", "EI154", "EI156", "EI158", "EI160"]
-
-  return schedule.times.map((times, i) => ({
-    id: `${slug}-${i}`,
-    departureTime: times[0],
-    arrivalTime: times[1],
-    duration: schedule.duration,
-    stops: 0,
-    price: schedule.base + i * 20 + Math.floor(Math.random() * 30),
-    flightNumber: flightNumbers[i],
-  }))
-}
 
 export function getRouteBySlug(slug: string): Route | undefined {
   return ROUTES.find((r) => r.slug === slug)

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { unstable_cache } from "next/cache"
 import type { Metadata } from "next"
-import { MapPin, Clock, Calendar, Zap, Globe, Database } from "lucide-react"
+import { MapPin, Zap, Database } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { RouteFlightCard } from "@/components/route-flight-card"
@@ -158,14 +158,6 @@ export default async function RoutePage({
                 <MapPin className="h-4 w-4" />
                 {route.originCode} → {route.destinationCode}
               </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {route.duration}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                {route.frequency}
-              </span>
               {hasData && (
                 <span className="flex items-center gap-2 rounded-full bg-primary/80 px-3 py-0.5 text-white">
                   From €{fareData.lowestFare}
@@ -213,15 +205,15 @@ export default async function RoutePage({
                 </div>
               )}
 
-              {/* Featured flights */}
+              {/* Booked flights from Redis */}
               <div className="mb-10">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold">
-                      {route.origin} to {route.destination} flights
+                      {route.origin} to {route.destination} - Recent Bookings
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      Direct flights · {route.duration} · from €{fareData.lowestFare}
+                      From €{fareData.lowestFare}
                       <span className="ml-2 text-green-600">
                         · Updated {new Date(fareData.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
@@ -229,7 +221,7 @@ export default async function RoutePage({
                   </div>
                   <span className="flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
                     <Database className="h-3 w-3" />
-                    Live fares from Redis
+                    Live data from Redis
                   </span>
                 </div>
                 <div className="space-y-3">
@@ -291,33 +283,7 @@ export default async function RoutePage({
             </div>
           )}
 
-          {/* Route info */}
-          <div className="grid gap-6 sm:grid-cols-3">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-2 flex items-center gap-2 text-primary">
-                <Globe className="h-4 w-4" />
-                <span className="text-sm font-semibold uppercase tracking-wide">Route</span>
-              </div>
-              <p className="font-semibold">{route.origin} ({route.originCode}) → {route.destination} ({route.destinationCode})</p>
-              <p className="text-sm text-muted-foreground">{route.description}</p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-2 flex items-center gap-2 text-primary">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm font-semibold uppercase tracking-wide">Flight time</span>
-              </div>
-              <p className="text-2xl font-bold">{route.duration}</p>
-              <p className="text-sm text-muted-foreground">Direct flight, no stops</p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-2 flex items-center gap-2 text-primary">
-                <Calendar className="h-4 w-4" />
-                <span className="text-sm font-semibold uppercase tracking-wide">Frequency</span>
-              </div>
-              <p className="text-2xl font-bold">{route.frequency.split(" ")[0]} {route.frequency.split(" ")[1]}</p>
-              <p className="text-sm text-muted-foreground">{route.frequency.split(" ").slice(2).join(" ")}</p>
-            </div>
-          </div>
+          
         </div>
       </main>
 

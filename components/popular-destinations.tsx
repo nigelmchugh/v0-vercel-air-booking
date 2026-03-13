@@ -8,32 +8,24 @@ const destinations = [
     city: "London",
     cityCode: "london",
     country: "United Kingdom",
-    priceFrom: 49,
-    priceTo: 49,
     image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=300&fit=crop",
   },
   {
     city: "New York",
     cityCode: "new-york",
     country: "United States",
-    priceFrom: 279,
-    priceTo: 299,
     image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop",
   },
   {
     city: "Amsterdam",
     cityCode: "amsterdam",
     country: "Netherlands",
-    priceFrom: 79,
-    priceTo: 79,
     image: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=400&h=300&fit=crop",
   },
   {
     city: "Barcelona",
     cityCode: "barcelona",
     country: "Spain",
-    priceFrom: 89,
-    priceTo: 89,
     image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400&h=300&fit=crop",
   },
 ]
@@ -66,7 +58,7 @@ function DestinationCard({ destination }: { destination: typeof destinations[0] 
             <PlaneTakeoff className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm">Dublin to {destination.city}</span>
           </div>
-          <span className="text-sm font-semibold">from €{destination.priceFrom}</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </Link>
         <Link
           href={`/flights/${toDublinSlug}`}
@@ -76,7 +68,7 @@ function DestinationCard({ destination }: { destination: typeof destinations[0] 
             <PlaneLanding className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm">{destination.city} to Dublin</span>
           </div>
-          <span className="text-sm font-semibold">from €{destination.priceTo}</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>
     </div>
