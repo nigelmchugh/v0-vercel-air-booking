@@ -41,11 +41,15 @@ async function getLiveFares(slug: string): Promise<{
   }
 
   try {
-    // Only attempt KV read if env vars are present
+    // Only attempt Redis read if env vars are present
     if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-      const { kv } = await import("@vercel/kv")
+      const { Redis } = await import("@upstash/redis")
+      const redis = new Redis({
+        url: process.env.KV_REST_API_URL,
+        token: process.env.KV_REST_API_TOKEN,
+      })
       const kvKey = `route:${route.originCode}-${route.destinationCode}`.toLowerCase()
-      const raw = await kv.get<string>(kvKey)
+      const raw = await redis.get<string>(kvKey)
 
       if (raw) {
         const data: RouteData = typeof raw === "string" ? JSON.parse(raw) : raw
@@ -79,7 +83,7 @@ async function getLiveFares(slug: string): Promise<{
       }
     }
   } catch (err) {
-    console.warn("[route-page] KV read failed, using mock data:", err)
+    console.warn("[route-page] Redis read failed, using mock data:", err)
   }
 
   // Fallback: mock data

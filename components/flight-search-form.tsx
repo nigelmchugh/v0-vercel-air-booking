@@ -50,9 +50,7 @@ export function FlightSearchForm({ onSearch }: FlightSearchFormProps) {
   }
 
   const handleSearch = () => {
-    console.log("[v0] handleSearch called", { from, to, departDate, tripType, passengers })
     if (from && to && departDate) {
-      console.log("[v0] Calling onSearch with params")
       onSearch({
         from,
         to,
@@ -61,8 +59,6 @@ export function FlightSearchForm({ onSearch }: FlightSearchFormProps) {
         passengers: parseInt(passengers),
         tripType,
       })
-    } else {
-      console.log("[v0] Search blocked - missing fields", { from: !!from, to: !!to, departDate: !!departDate })
     }
   }
 

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
+import { Redis } from "@upstash/redis"
 
-// Vercel KV — only imported if env vars are present
-let kv: typeof import("@vercel/kv").kv | null = null
-
-async function getKv() {
+// Initialize Redis client if env vars are present
+function getRedis() {
   if (
     process.env.KV_REST_API_URL &&
     process.env.KV_REST_API_TOKEN
   ) {
-    const mod = await import("@vercel/kv")
-    return mod.kv
+    return new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    })
   }
   return null
 }
@@ -71,19 +72,19 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     }
 
-    const client = await getKv()
+    const redis = getRedis()
 
-    if (client) {
-      // Write to KV with 24hr TTL — real data stays fresh
-      await client.set(`route:${slug}`, JSON.stringify(routeData), { ex: 86400 })
+    if (redis) {
+      // Write to Redis with 24hr TTL — real data stays fresh
+      await redis.set(`route:${slug}`, JSON.stringify(routeData), { ex: 86400 })
 
       // Also maintain an index of all known routes
-      await client.sadd("routes:index", slug)
+      await redis.sadd("routes:index", slug)
 
-      console.log(`[ingest-fares] Stored route:${slug} → KV (${flights.length} flights, lowest €${lowestFare})`)
+      console.log(`[ingest-fares] Stored route:${slug} → Redis (${flights.length} flights, lowest €${lowestFare})`)
     } else {
-      // KV not configured — log to console (still works as demo without KV)
-      console.log(`[ingest-fares] KV not configured. Would store route:${slug}`, {
+      // Redis not configured — log to console (still works as demo without Redis)
+      console.log(`[ingest-fares] Redis not configured. Would store route:${slug}`, {
         flights: flights.length,
         lowestFare,
       })
@@ -92,11 +93,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       slug,
-      stored: !!client,
+      stored: !!redis,
       lowestFare,
-      message: client
-        ? `Stored ${flights.length} flights for ${origin}→${destination} in KV`
-        : `KV not configured — data captured but not persisted`,
+      message: redis
+        ? `Stored ${flights.length} flights for ${origin}→${destination} in Redis`
+        : `Redis not configured — data captured but not persisted`,
     })
   } catch (err) {
     console.error("[ingest-fares] Error:", err)
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
 }
 
 // GET /api/ingest-fares?slug=dub-lhr
-// Lets the ISR page (and debugging) read a route from KV
+// Lets the ISR page (and debugging) read a route from Redis
 export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("slug")
 
@@ -113,16 +114,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "slug required" }, { status: 400 })
   }
 
-  const client = await getKv()
+  const redis = getRedis()
 
-  if (!client) {
-    return NextResponse.json({ error: "KV not configured", slug }, { status: 503 })
+  if (!redis) {
+    return NextResponse.json({ error: "Redis not configured", slug }, { status: 503 })
   }
 
-  const raw = await client.get<string>(`route:${slug}`)
+  const raw = await redis.get<string>(`route:${slug}`)
 
   if (!raw) {
-    return NextResponse.json({ error: "Route not found in KV", slug }, { status: 404 })
+    return NextResponse.json({ error: "Route not found in Redis", slug }, { status: 404 })
   }
 
   const data: RouteData = typeof raw === "string" ? JSON.parse(raw) : raw
